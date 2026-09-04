@@ -9,7 +9,11 @@ export default defineConfig({
     },
     manifest: {
         name: 'Runway UI Helper',
-        description: 'Runway の生成画面へ生成時間と生成中の経過時間を表示します',
-        version: '0.1.0',
+        description: 'Runway の生成時間を表示し、生成完了を通知します',
+        version: '0.2.0',
+        permissions: [
+            'notifications',
+            'storage',
+        ],
     },
 });

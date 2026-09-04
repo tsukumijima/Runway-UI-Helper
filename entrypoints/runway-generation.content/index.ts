@@ -3,7 +3,7 @@ import { createApp, type App as VueApp } from 'vue';
 import GenerationTimer from './GenerationTimer.vue';
 import './style.css';
 
-import type { RunwaySessionResponse, RunwayTask } from './types';
+import type { GenerationCompletedMessage, RunwaySessionResponse, RunwayTask } from './types';
 
 const SESSION_API_PATTERN = /^https:\/\/api\.runwayml\.com\/v1\/sessions\/[^/?]+(?:\?|$)/;
 const TASK_API_PATTERN = /^https:\/\/api\.runwayml\.com\/v1\/tasks\/[^/?]+(?:\?|$)/;
@@ -22,8 +22,10 @@ export default defineContentScript({
     world: 'MAIN',
     main() {
         let tasks: Array<RunwayTask | null> = [];
+        let hasReceivedSession = false;
         let isRenderScheduled = false;
         const mountedTimers = new Map<HTMLElement, MountedTimer>();
+        const taskStatuses = new Map<string, string>();
 
         /**
          * Runway のタスク API から時刻表示に必要な公開フィールドだけを読み取る。
@@ -47,10 +49,49 @@ export default defineContentScript({
 
             return {
                 id: taskCandidate.id!,
+                name: typeof taskCandidate.name === 'string' ? taskCandidate.name : undefined,
                 status: taskCandidate.status!,
+                taskType: typeof taskCandidate.taskType === 'string' ? taskCandidate.taskType : undefined,
                 createdAt: taskCandidate.createdAt!,
                 updatedAt: taskCandidate.updatedAt!,
             };
+        };
+
+        /**
+         * Runway の表示用タスク名からモデル名だけを取り出す。
+         * @param task モデル名を含むタスク
+         * @returns 通知へ表示するモデル名
+         */
+        const getModelName = (task: RunwayTask): string => {
+            const namePrefix = task.name?.split(' - ', 1)[0].trim();
+            const rawModelName = namePrefix || task.taskType || 'Runway';
+
+            // 内部名の数字間にあるアンダースコアを小数点へ戻して、画面上のモデル名に近づける
+            return rawModelName.replace(/(?<=\d)_(?=\d)/g, '.');
+        };
+
+        /**
+         * 観測済みタスクが成功状態へ移った場合だけ、拡張機能側へ完了情報を渡す。
+         * @param task 最新状態のタスク
+         */
+        const observeTaskStatus = (task: RunwayTask): void => {
+            const previousStatus = taskStatuses.get(task.id);
+            taskStatuses.set(task.id, task.status);
+
+            // 初回取得した完了済みタスクを除き、この画面で追跡していた生成の完了だけを通知する
+            if (previousStatus === undefined || previousStatus === 'SUCCEEDED' || task.status !== 'SUCCEEDED') {
+                return;
+            }
+
+            const message: GenerationCompletedMessage = {
+                source: 'runway-ui-helper',
+                type: 'generation-completed',
+                taskID: task.id,
+                modelName: getModelName(task),
+                elapsedMilliseconds: Math.max(0, Date.parse(task.updatedAt) - Date.parse(task.createdAt)),
+                sessionURL: window.location.href,
+            };
+            window.postMessage(message, window.location.origin);
         };
 
         /**
@@ -131,6 +172,16 @@ export default defineContentScript({
                         tasks = sessionResponse.generations
                             .filter((generation) => generation.deleted !== true)
                             .map((generation) => parseTask(generation?.task));
+                        for (const task of tasks) {
+                            if (task !== null) {
+                                if (hasReceivedSession === true) {
+                                    observeTaskStatus(task);
+                                } else {
+                                    taskStatuses.set(task.id, task.status);
+                                }
+                            }
+                        }
+                        hasReceivedSession = true;
                         scheduleRender();
                     }
                     return;
@@ -143,6 +194,7 @@ export default defineContentScript({
                 }
 
                 // 個別タスクのポーリング結果でステータスと完了時刻を更新する
+                observeTaskStatus(updatedTask);
                 tasks = tasks.map((task) => task?.id === updatedTask.id ? updatedTask : task);
                 scheduleRender();
             } catch (error) {

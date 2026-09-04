@@ -1,8 +1,8 @@
 {
     "name": "runway-ui-helper",
-    "description": "Runway の生成画面へ生成時間を表示する Chrome 拡張機能",
+    "description": "Runway の生成時間を表示し、生成完了を通知する Chrome 拡張機能",
     "private": true,
-    "version": "0.1.0",
+    "version": "0.2.0",
     "type": "module",
     "scripts": {
         "dev": "wxt",
