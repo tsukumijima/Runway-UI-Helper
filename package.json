@@ -1,0 +1,40 @@
+{
+    "name": "runway-ui-helper",
+    "description": "Runway の生成画面へ生成時間を表示する Chrome 拡張機能",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "dev": "wxt",
+        "build": "wxt build",
+        "zip": "wxt zip",
+        "prepare": "wxt prepare",
+        "lint": "eslint . --fix --ignore-path .gitignore && stylelint 'entrypoints/**/*.css' --fix",
+        "typecheck": "vue-tsc --noEmit"
+    },
+    "packageManager": "npm@10.9.2",
+    "dependencies": {
+        "vue": "^3.5.0"
+    },
+    "devDependencies": {
+        "@stylistic/stylelint-plugin": "^5.0.0",
+        "@typescript-eslint/eslint-plugin": "^7.18.0",
+        "@typescript-eslint/parser": "^7.18.0",
+        "@vue/eslint-config-typescript": "^13.0.0",
+        "@wxt-dev/module-vue": "^1.0.0",
+        "eslint": "^8.47.0",
+        "eslint-import-resolver-typescript": "^3.6.1",
+        "eslint-plugin-import": "^2.29.1",
+        "eslint-plugin-unused-imports": "^3.2.0",
+        "eslint-plugin-vue": "^9.33.0",
+        "postcss-scss": "^4.0.9",
+        "stylelint": "^17.0.0",
+        "stylelint-scss": "^7.0.0",
+        "typescript": "^5.7.0",
+        "vue-tsc": "^2.2.0",
+        "wxt": "^0.20.0"
+    },
+    "engines": {
+        "node": ">=20.19.0"
+    }
+}
